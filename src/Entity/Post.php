@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\PostRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -11,7 +13,12 @@ class Post
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column]
+    #[ORM\Column(
+        # non signé
+        options: [
+            'unsigned' => true,
+        ]
+    )]
     private ?int $id = null;
 
     #[ORM\Column(length: 160)]
@@ -20,14 +27,39 @@ class Post
     #[ORM\Column(type: Types::TEXT)]
     private ?string $postText = null;
 
-    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
-    private ?\DateTimeInterface $postDatetCreated = null;
+    #[ORM\Column(
+        type: Types::DATETIME_MUTABLE,
+        # valeur par défaut
+        options: [
+            'default'=> 'CURRENT_TIMESTAMP',
+        ]
+    )]
+    private ?\DateTimeInterface $postDateCreated = null;
 
-    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
+    #[ORM\Column(
+        type: Types::DATETIME_MUTABLE,
+        nullable: true
+    )]
     private ?\DateTimeInterface $postDatePublished = null;
 
-    #[ORM\Column(nullable: true)]
+    #[ORM\Column(
+        options: [
+            # Par défaut, false (0)
+            'default'=> false,
+        ]
+    )]
     private ?bool $postPublished = null;
+
+    /**
+     * @var Collection<int, Section>
+     */
+    #[ORM\ManyToMany(targetEntity: Section::class, mappedBy: 'sectionPost')]
+    private Collection $sections;
+
+    public function __construct()
+    {
+        $this->sections = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -58,14 +90,14 @@ class Post
         return $this;
     }
 
-    public function getPostDatetCreated(): ?\DateTimeInterface
+    public function getPostDateCreated(): ?\DateTimeInterface
     {
-        return $this->postDatetCreated;
+        return $this->postDateCreated;
     }
 
-    public function setPostDatetCreated(?\DateTimeInterface $postDatetCreated): static
+    public function setPostDateCreated(?\DateTimeInterface $postDateCreated): static
     {
-        $this->postDatetCreated = $postDatetCreated;
+        $this->postDateCreated = $postDateCreated;
 
         return $this;
     }
@@ -90,6 +122,33 @@ class Post
     public function setPostPublished(?bool $postPublished): static
     {
         $this->postPublished = $postPublished;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Section>
+     */
+    public function getSections(): Collection
+    {
+        return $this->sections;
+    }
+
+    public function addSection(Section $section): static
+    {
+        if (!$this->sections->contains($section)) {
+            $this->sections->add($section);
+            $section->addSectionPost($this);
+        }
+
+        return $this;
+    }
+
+    public function removeSection(Section $section): static
+    {
+        if ($this->sections->removeElement($section)) {
+            $section->removeSectionPost($this);
+        }
 
         return $this;
     }
